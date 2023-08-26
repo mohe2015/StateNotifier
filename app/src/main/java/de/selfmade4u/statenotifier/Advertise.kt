@@ -21,6 +21,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import kotlinx.coroutines.launch
 import java.security.KeyPairGenerator
 import java.security.KeyStore
@@ -28,9 +30,8 @@ import java.security.Signature
 import java.util.UUID
 
 
-@Preview
 @Composable
-fun Discover() {
+fun Advertise(navController: NavController) {
     val scope = rememberCoroutineScope()
 
     Column(
@@ -39,6 +40,7 @@ fun Discover() {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Text("Add service to advertise", fontSize = 30.sp)
         var text by rememberSaveable(stateSaver = TextFieldValue.Saver) {
             mutableStateOf(
                 TextFieldValue("")
@@ -79,7 +81,7 @@ fun Discover() {
 
             kpg.initialize(parameterSpec)
 
-            val kp = kpg.generateKeyPair()
+            kpg.generateKeyPair()
 
             /*
  * Use a PrivateKey in the KeyStore to create a signature over
@@ -93,7 +95,7 @@ fun Discover() {
                 Log.w("StateNotifier", "Not an instance of a PrivateKeyEntry")
                 throw Error("fail")
             }
-            val signature: ByteArray = Signature.getInstance("SHA512withRSA/PSS").run {
+            Signature.getInstance("SHA512withRSA/PSS").run {
                 initSign(entry.privateKey)
                 update("this is test data".toByteArray())
                 sign()
@@ -102,6 +104,8 @@ fun Discover() {
             scope.launch {
                 AppDatabase.getDatabase(context).advertisedServiceDao()
                     .insertAll(AdvertisedService(alias, text.text))
+
+                navController.navigate("advertise/${alias}")
             }
         }) {
             Text("Create service")

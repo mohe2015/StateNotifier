@@ -10,11 +10,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalDrawerSheet
@@ -35,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -58,6 +61,38 @@ sealed class Screen(val route: String, @StringRes val resourceId: Int) {
     object Advertise : Screen("advertise", R.string.advertise)
 }
 
+@Preview
+@Composable
+fun RenderScreenPreview() {
+    RenderScreen(rememberNavController(), rememberDrawerState(DrawerValue.Open), Screen.Discover)
+}
+
+@Composable
+fun RenderScreen(navController: NavController, drawerState: DrawerState, screen: Screen) {
+    val scope = rememberCoroutineScope()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    NavigationDrawerItem(
+        label = { Text(stringResource(screen.resourceId)) },
+        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+        onClick = {
+            navController.navigate(screen.route) {
+                // Pop up to the start destination of the graph to
+                // avoid building up a large stack of destinations
+                // on the back stack as users select items
+                popUpTo(navController.graph.findStartDestination().id) {
+                    saveState = true
+                }
+                // Avoid multiple copies of the same destination when
+                // reselecting the same item
+                launchSingleTop = true
+                // Restore state when reselecting a previously selected item
+                restoreState = true
+            }
+            scope.launch { drawerState.close() }
+        }
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview
@@ -65,7 +100,7 @@ sealed class Screen(val route: String, @StringRes val resourceId: Int) {
 fun MainActivityContent() {
     val navController = rememberNavController()
 
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val drawerState = rememberDrawerState(DrawerValue.Open)
     val scope = rememberCoroutineScope()
     val items = listOf(
         Screen.Discover,
@@ -86,50 +121,21 @@ fun MainActivityContent() {
                             Spacer(Modifier.height(12.dp))
                             val navBackStackEntry by navController.currentBackStackEntryAsState()
                             val currentDestination = navBackStackEntry?.destination
-                            items.forEach { screen ->
-                                NavigationDrawerItem(
-                                    icon = {
-                                        Icon(
-                                            Icons.Filled.Favorite,
-                                            contentDescription = null
-                                        )
-                                    },
-                                    label = { Text(stringResource(screen.resourceId)) },
-                                    selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                                    onClick = {
-                                        navController.navigate(screen.route) {
-                                            // Pop up to the start destination of the graph to
-                                            // avoid building up a large stack of destinations
-                                            // on the back stack as users select items
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
-                                            }
-                                            // Avoid multiple copies of the same destination when
-                                            // reselecting the same item
-                                            launchSingleTop = true
-                                            // Restore state when reselecting a previously selected item
-                                            restoreState = true
-                                        }
-                                        scope.launch { drawerState.close() }
-                                    }
-                                )
-                            }
                             val state by AppDatabase.getDatabase(LocalContext.current)
                                 .advertisedServiceDao().getAll().collectAsStateWithLifecycle(
                                 listOf()
                             )
+                            RenderScreen(navController, drawerState, Screen.Discover)
+                            Spacer(Modifier.size(8.dp))
+                            HorizontalDivider()
+                            Spacer(Modifier.size(16.dp))
+                            RenderScreen(navController, drawerState, Screen.Advertise)
                             state.forEach { advertisedService ->
                                 NavigationDrawerItem(
-                                    icon = {
-                                        Icon(
-                                            Icons.Filled.Favorite,
-                                            contentDescription = null
-                                        )
-                                    },
                                     label = { Text(advertisedService.name) },
-                                    selected = currentDestination?.hierarchy?.any { it.route == advertisedService.privateKey } == true,
+                                    selected = currentDestination?.hierarchy?.any { it.route == "advertise/${advertisedService.privateKey}" } == true,
                                     onClick = {
-                                        navController.navigate(advertisedService.privateKey) {
+                                        navController.navigate("advertise/${advertisedService.privateKey}") {
                                             // Pop up to the start destination of the graph to
                                             // avoid building up a large stack of destinations
                                             // on the back stack as users select items
@@ -173,19 +179,15 @@ fun MainActivityContent() {
                                 Modifier.padding(innerPadding)
                             ) {
                                 composable(Screen.Discover.route) {
-                                    Discover()
+
                                 }
                                 composable(Screen.Advertise.route) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .padding(16.dp),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Text(text = if (drawerState.isClosed) ">>> Advertise >>>" else "<<< Advertise <<<")
-                                        Spacer(Modifier.height(20.dp))
-
-                                    }
+                                    Advertise(navController)
+                                }
+                                composable("advertise/{serviceId}") {
+                                        backStackEntry ->
+                                    AdvertisedServiceDetails(navController,
+                                        backStackEntry.arguments!!.getString("serviceId")!!)
                                 }
                             }
                         }
@@ -194,12 +196,4 @@ fun MainActivityContent() {
             }
         )
     }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
 }
