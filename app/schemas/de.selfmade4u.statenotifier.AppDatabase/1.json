@@ -1,0 +1,85 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "07d5867392e207912e9000a1a6279205",
+    "entities": [
+      {
+        "tableName": "advertised_service",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`private_key` TEXT NOT NULL, `name` TEXT NOT NULL, PRIMARY KEY(`private_key`))",
+        "fields": [
+          {
+            "fieldPath": "privateKey",
+            "columnName": "private_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "private_key"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "subscribed_user",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`advertised_service` TEXT NOT NULL, `public_key` TEXT NOT NULL, `name` TEXT NOT NULL, PRIMARY KEY(`advertised_service`, `public_key`), FOREIGN KEY(`advertised_service`) REFERENCES `advertised_service`(`private_key`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "advertisedService",
+            "columnName": "advertised_service",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "publicKey",
+            "columnName": "public_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "advertised_service",
+            "public_key"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": [
+          {
+            "table": "advertised_service",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "advertised_service"
+            ],
+            "referencedColumns": [
+              "private_key"
+            ]
+          }
+        ]
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '07d5867392e207912e9000a1a6279205')"
+    ]
+  }
+}
