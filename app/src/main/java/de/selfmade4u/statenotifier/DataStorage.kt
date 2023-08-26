@@ -12,7 +12,6 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room.databaseBuilder
 import androidx.room.RoomDatabase
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 
 // service identifier like rolling proximity identifier, so based on time and hash of public key?

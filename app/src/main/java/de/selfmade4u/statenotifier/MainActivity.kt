@@ -60,7 +60,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
 
-
         val uploadWorkRequest: WorkRequest =
             OneTimeWorkRequestBuilder<NetworkDiscoveryServiceWorker>()
                 .build()
@@ -137,8 +136,8 @@ fun MainActivityContent() {
                             val currentDestination = navBackStackEntry?.destination
                             val state by AppDatabase.getDatabase(LocalContext.current)
                                 .advertisedServiceDao().getAll().collectAsStateWithLifecycle(
-                                listOf()
-                            )
+                                    listOf()
+                                )
                             RenderScreen(navController, drawerState, Screen.Discover)
                             Spacer(Modifier.size(8.dp))
                             HorizontalDivider()
@@ -187,21 +186,23 @@ fun MainActivityContent() {
                                     }
                                 },
                             )
+                            // TODO FIXME if you grant the permission the notification doesn't appear if it is already there
                             val notificationPermissionState = if (LocalInspectionMode.current) {
-                            object : MultiplePermissionsState {
-                                override val allPermissionsGranted: Boolean = false
-                                override val permissions: List<PermissionState> = emptyList()
-                                override val revokedPermissions: List<PermissionState> = emptyList()
-                                override val shouldShowRationale: Boolean = false
-                                override fun launchMultiplePermissionRequest() {}
-                            }
-                        } else {
-                            rememberMultiplePermissionsState(
-                                listOf(
-                                    Manifest.permission.POST_NOTIFICATIONS
+                                object : MultiplePermissionsState {
+                                    override val allPermissionsGranted: Boolean = false
+                                    override val permissions: List<PermissionState> = emptyList()
+                                    override val revokedPermissions: List<PermissionState> =
+                                        emptyList()
+                                    override val shouldShowRationale: Boolean = false
+                                    override fun launchMultiplePermissionRequest() {}
+                                }
+                            } else {
+                                rememberMultiplePermissionsState(
+                                    listOf(
+                                        Manifest.permission.POST_NOTIFICATIONS
+                                    )
                                 )
-                            )
-                        }
+                            }
                             if (notificationPermissionState.allPermissionsGranted) {
                                 Text("Thanks! I can send you notifications.")
                             } else {
@@ -243,10 +244,11 @@ fun MainActivityContent() {
                                 composable(Screen.Advertise.route) {
                                     Advertise(navController)
                                 }
-                                composable("advertise/{serviceId}") {
-                                        backStackEntry ->
-                                    AdvertisedServiceDetails(navController,
-                                        backStackEntry.arguments!!.getString("serviceId")!!)
+                                composable("advertise/{serviceId}") { backStackEntry ->
+                                    AdvertisedServiceDetails(
+                                        navController,
+                                        backStackEntry.arguments!!.getString("serviceId")!!
+                                    )
                                 }
                             }
                         }
