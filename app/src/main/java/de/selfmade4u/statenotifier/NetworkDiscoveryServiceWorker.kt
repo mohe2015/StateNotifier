@@ -16,6 +16,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import java.net.ServerSocket
 import java.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -33,15 +34,15 @@ class NetworkDiscoveryServiceWorker(appContext: Context, workerParams: WorkerPar
         val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "statenotifier:nds");
         wakeLock.acquire(10*60*1000L /*10 minutes*/);
 */
-        val nsdManager = (applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager)
+        val nsdManager = NsdManagerFlow(applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager)
 
         // TODO FIXME unregister on cancellation
-
-        AppDatabase.getDatabase(applicationContext).advertisedServiceDao().getAll()
+        AppDatabase.getDatabase(applicationContext).advertisedServiceDao().getAll().distinctUntilChanged()
             .collect { services ->
                 Log.w("StateNotifier", services.toString())
 
                 for (service in services) {
+                    // TODO FIXME
                     val serverSocket = ServerSocket(0)
 
                     val serviceInfo = NsdServiceInfo().apply {
@@ -50,45 +51,14 @@ class NetworkDiscoveryServiceWorker(appContext: Context, workerParams: WorkerPar
                         port = serverSocket.localPort
                     }
 
-                    val registrationListener = object : NsdManager.RegistrationListener {
-
-                        override fun onServiceRegistered(nsdServiceInfo: NsdServiceInfo) {
-                            // Save the service name. Android may have changed it in order to
-                            // resolve a conflict, so update the name you initially requested
-                            // with the name Android actually used.
-                            val mServiceName = nsdServiceInfo.serviceName
-                            Log.w("StateNotifier", "onServiceRegistered $service")
-                        }
-
-                        override fun onRegistrationFailed(
-                            serviceInfo: NsdServiceInfo,
-                            errorCode: Int
-                        ) {
-                            // Registration failed! Put debugging code here to determine why.
-                            Log.w("StateNotifier", "onRegistrationFailed")
-                        }
-
-                        override fun onServiceUnregistered(arg0: NsdServiceInfo) {
-                            // Service has been unregistered. This only happens when you call
-                            // NsdManager.unregisterService() and pass in this listener.
-                            Log.w("StateNotifier", "onServiceUnregistered")
-                        }
-
-                        override fun onUnregistrationFailed(
-                            serviceInfo: NsdServiceInfo,
-                            errorCode: Int
-                        ) {
-                            // Unregistration failed. Put debugging code here to determine why.
-                            Log.w("StateNotifier", "onUnregistrationFailed")
-                        }
-                    }
-
-                    nsdManager.apply {
-                        registerService(
+                    // TODO FIXME flatmap?
+                    val registered = nsdManager.registerService(
                             serviceInfo,
                             NsdManager.PROTOCOL_DNS_SD,
-                            registrationListener
-                        )
+                    )
+
+                    registered.collect { value ->
+                        Log.w(TAG, "$value")
                     }
                 }
             }
