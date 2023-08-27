@@ -58,6 +58,8 @@ import com.google.accompanist.permissions.shouldShowRationale
 import de.selfmade4u.statenotifier.ui.theme.StateNotiferTheme
 import kotlinx.coroutines.launch
 
+public val TAG: String = "StateNotifer"
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -196,8 +198,9 @@ fun MainActivityContent() {
                                 }
                             } else {
                                 rememberPermissionState(
-                                    Manifest.permission.POST_NOTIFICATIONS,
-                                    { notificationsAllowed -> if (notificationsAllowed) {
+                                    Manifest.permission.POST_NOTIFICATIONS
+                                ) { notificationsAllowed ->
+                                    if (notificationsAllowed) {
                                         Log.w("StateNotifier", "Start work")
                                         scope.launch {
                                             val networkDiscovery: WorkRequest =
@@ -208,8 +211,7 @@ fun MainActivityContent() {
                                                 .enqueue(networkDiscovery)
                                         }
                                     }
-                                    }
-                                )
+                                }
                             }
                             if (!notificationPermissionState.status.isGranted) {
                                 Column {
@@ -235,7 +237,7 @@ fun MainActivityContent() {
                                 Modifier.padding(innerPadding)
                             ) {
                                 composable(Screen.Discover.route) {
-
+                                    Discover()
                                 }
                                 composable(Screen.Advertise.route) {
                                     Advertise(navController)

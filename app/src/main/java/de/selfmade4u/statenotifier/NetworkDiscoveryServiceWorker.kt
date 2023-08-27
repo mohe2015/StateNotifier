@@ -35,6 +35,8 @@ class NetworkDiscoveryServiceWorker(appContext: Context, workerParams: WorkerPar
 */
         val nsdManager = (applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager)
 
+        // TODO FIXME unregister on cancellation
+
         AppDatabase.getDatabase(applicationContext).advertisedServiceDao().getAll()
             .collect { services ->
                 Log.w("StateNotifier", services.toString())
