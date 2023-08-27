@@ -57,7 +57,7 @@ class NetworkDiscoveryServiceWorker(appContext: Context, workerParams: WorkerPar
                             // resolve a conflict, so update the name you initially requested
                             // with the name Android actually used.
                             val mServiceName = nsdServiceInfo.serviceName
-                            Log.w("StateNotifier", "onServiceRegistered")
+                            Log.w("StateNotifier", "onServiceRegistered $service")
                         }
 
                         override fun onRegistrationFailed(

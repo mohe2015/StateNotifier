@@ -46,7 +46,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -63,6 +67,13 @@ public val TAG: String = "StateNotifer"
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val networkDiscovery: OneTimeWorkRequest =
+            OneTimeWorkRequestBuilder<NetworkDiscoveryServiceWorker>()
+                .build()
+        WorkManager
+            .getInstance(this)
+            .enqueueUniqueWork("nsd", ExistingWorkPolicy.KEEP, networkDiscovery)
 
         setContent {
             MainActivityContent()
@@ -199,19 +210,7 @@ fun MainActivityContent() {
                             } else {
                                 rememberPermissionState(
                                     Manifest.permission.POST_NOTIFICATIONS
-                                ) { notificationsAllowed ->
-                                    if (notificationsAllowed) {
-                                        Log.w("StateNotifier", "Start work")
-                                        scope.launch {
-                                            val networkDiscovery: WorkRequest =
-                                                OneTimeWorkRequestBuilder<NetworkDiscoveryServiceWorker>()
-                                                    .build()
-                                            WorkManager
-                                                .getInstance(context)
-                                                .enqueue(networkDiscovery)
-                                        }
-                                    }
-                                }
+                                )
                             }
                             if (!notificationPermissionState.status.isGranted) {
                                 Column {

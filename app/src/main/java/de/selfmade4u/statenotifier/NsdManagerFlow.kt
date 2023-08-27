@@ -46,6 +46,7 @@ class NsdManagerFlow(val nsdManager: NsdManager) {
         serviceInfo: NsdServiceInfo,
         protocolType: Int,
     ): Flow<RegistrationEvent> = callbackFlow {
+        Log.w(TAG, "registerService")
         val registrationListener = object : NsdManager.RegistrationListener {
             override fun onRegistrationFailed(nsdServiceInfo: NsdServiceInfo, errorCode: Int) {
                 close(RegistrationFailedException(nsdServiceInfo, errorCode))
@@ -58,12 +59,14 @@ class NsdManagerFlow(val nsdManager: NsdManager) {
             override fun onServiceRegistered(nsdServiceInfo: NsdServiceInfo) {
                 trySendBlocking(RegistrationEvent.ServiceRegistered(nsdServiceInfo)).onFailure { throwable ->
                     Log.e(TAG, "trySendBlocking", throwable)
+                    close(throwable)
                 }
             }
 
             override fun onServiceUnregistered(nsdServiceInfo: NsdServiceInfo) {
                 trySendBlocking(RegistrationEvent.ServiceUnregistered(nsdServiceInfo)).onFailure { throwable ->
                     Log.e(TAG, "trySendBlocking", throwable)
+                    close(throwable)
                 }
             }
 
@@ -76,6 +79,7 @@ class NsdManagerFlow(val nsdManager: NsdManager) {
         serviceType: String,
         protocolType: Int,
     ): Flow<DiscoverEvent> = callbackFlow {
+        Log.w(TAG, "discoverServices")
         val discoveryListener = object : NsdManager.DiscoveryListener {
             override fun onStartDiscoveryFailed(serviceType: String, errorCode: Int) {
                 close(StartDiscoveryFailedException(serviceType, errorCode))
@@ -96,12 +100,14 @@ class NsdManagerFlow(val nsdManager: NsdManager) {
             override fun onServiceFound(nsdServiceInfo: NsdServiceInfo) {
                 trySendBlocking(DiscoverEvent.ServiceFound(nsdServiceInfo)).onFailure { throwable ->
                     Log.e(TAG, "trySendBlocking", throwable)
+                    close(throwable)
                 }
             }
 
             override fun onServiceLost(nsdServiceInfo: NsdServiceInfo) {
                 trySendBlocking(DiscoverEvent.ServiceLost(nsdServiceInfo)).onFailure { throwable ->
                     Log.e(TAG, "trySendBlocking", throwable)
+                    close(throwable)
                 }
             }
 
@@ -112,6 +118,7 @@ class NsdManagerFlow(val nsdManager: NsdManager) {
 
     suspend fun resolveService(serviceInfo: NsdServiceInfo): NsdServiceInfo =
         suspendCancellableCoroutine {
+            Log.w(TAG, "resolveService")
             val resolveListener = object : NsdManager.ResolveListener {
                 override fun onResolveFailed(serviceInfo: NsdServiceInfo, errorCode: Int) {
                     it.resumeWithException(ResolveFailedException(serviceInfo, errorCode))
