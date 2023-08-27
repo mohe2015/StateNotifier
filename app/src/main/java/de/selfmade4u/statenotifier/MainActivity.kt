@@ -2,6 +2,7 @@ package de.selfmade4u.statenotifier
 
 import android.Manifest
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -49,23 +50,17 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkRequest
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.PermissionState
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import com.google.accompanist.permissions.PermissionStatus
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import de.selfmade4u.statenotifier.ui.theme.StateNotiferTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-
-        val uploadWorkRequest: WorkRequest =
-            OneTimeWorkRequestBuilder<NetworkDiscoveryServiceWorker>()
-                .build()
-        WorkManager
-            .getInstance(this)
-            .enqueue(uploadWorkRequest)
 
         setContent {
             MainActivityContent()
@@ -124,6 +119,7 @@ fun MainActivityContent() {
             drawerState.close()
         }
     }
+    val context = LocalContext.current
     StateNotiferTheme {
         Scaffold(
             content = { innerPadding ->
@@ -188,47 +184,47 @@ fun MainActivityContent() {
                             )
                             // TODO FIXME if you grant the permission the notification doesn't appear if it is already there
                             val notificationPermissionState = if (LocalInspectionMode.current) {
-                                object : MultiplePermissionsState {
-                                    override val allPermissionsGranted: Boolean = false
-                                    override val permissions: List<PermissionState> = emptyList()
-                                    override val revokedPermissions: List<PermissionState> =
-                                        emptyList()
-                                    override val shouldShowRationale: Boolean = false
-                                    override fun launchMultiplePermissionRequest() {}
+                                object : PermissionState {
+                                    override val permission: String
+                                        get() = Manifest.permission.POST_NOTIFICATIONS
+                                    override val status: PermissionStatus
+                                        get() = PermissionStatus.Granted
+
+                                    override fun launchPermissionRequest() {
+
+                                    }
                                 }
                             } else {
-                                rememberMultiplePermissionsState(
-                                    listOf(
-                                        Manifest.permission.POST_NOTIFICATIONS
-                                    )
+                                rememberPermissionState(
+                                    Manifest.permission.POST_NOTIFICATIONS,
+                                    { notificationsAllowed -> if (notificationsAllowed) {
+                                        Log.w("StateNotifier", "Start work")
+                                        scope.launch {
+                                            val networkDiscovery: WorkRequest =
+                                                OneTimeWorkRequestBuilder<NetworkDiscoveryServiceWorker>()
+                                                    .build()
+                                            WorkManager
+                                                .getInstance(context)
+                                                .enqueue(networkDiscovery)
+                                        }
+                                    }
+                                    }
                                 )
                             }
-                            if (notificationPermissionState.allPermissionsGranted) {
-                                Text("Thanks! I can send you notifications.")
-                            } else {
+                            if (!notificationPermissionState.status.isGranted) {
                                 Column {
-                                    val allPermissionsRevoked =
-                                        notificationPermissionState.permissions.size ==
-                                                notificationPermissionState.revokedPermissions.size
-                                    val textToShow = if (!allPermissionsRevoked) {
-                                        "Yay! Thanks for letting me send you some notifications. " +
-                                                "But you know what would be great? If you allow me to send you all notifications. Thank you!"
-                                    } else if (notificationPermissionState.shouldShowRationale) {
+                                    val textToShow = if (notificationPermissionState.status.shouldShowRationale) {
                                         "Sending notifications is useful for this app to show when it advertises your state in the background."
                                     } else {
                                         // First time the user sees this feature or the user doesn't want to be asked again
                                         "Showing the advertised state requires notification permission. Enable permission in app settings if you want it."
                                     }
 
-                                    val buttonText = if (!allPermissionsRevoked) {
-                                        "Allow sending more notifications"
-                                    } else {
-                                        "Allow sending notifications"
-                                    }
+                                    val buttonText = "Allow sending notifications"
 
                                     Text(text = textToShow)
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Button(onClick = { notificationPermissionState.launchMultiplePermissionRequest() }) {
+                                    Button(onClick = { notificationPermissionState.launchPermissionRequest() }) {
                                         Text(buttonText)
                                     }
                                 }

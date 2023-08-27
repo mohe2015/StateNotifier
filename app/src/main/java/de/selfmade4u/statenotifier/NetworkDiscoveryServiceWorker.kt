@@ -8,13 +8,17 @@ import android.content.Context
 import android.graphics.Color
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.delay
 import java.net.ServerSocket
+import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 class NetworkDiscoveryServiceWorker(appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
@@ -24,7 +28,11 @@ class NetworkDiscoveryServiceWorker(appContext: Context, workerParams: WorkerPar
         } catch (e: ForegroundServiceStartNotAllowedException) {
             Log.e("StateNotifier", "ForegroundServiceStartNotAllowedException", e)
         }
-
+/*
+        val powerManager = applicationContext.getSystemService(Context.POWER_SERVICE) as PowerManager;
+        val wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "statenotifier:nds");
+        wakeLock.acquire(10*60*1000L /*10 minutes*/);
+*/
         val nsdManager = (applicationContext.getSystemService(Context.NSD_SERVICE) as NsdManager)
 
         AppDatabase.getDatabase(applicationContext).advertisedServiceDao().getAll()
@@ -111,6 +119,7 @@ class NetworkDiscoveryServiceWorker(appContext: Context, workerParams: WorkerPar
             .setSmallIcon(R.drawable.baseline_hub_24)
             .setOngoing(true)
             .setCategory(Notification.CATEGORY_SERVICE)
+            .setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
             .addAction(android.R.drawable.ic_delete, "Cancel", intent)
             .build()
 
